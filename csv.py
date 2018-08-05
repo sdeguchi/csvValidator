@@ -29,15 +29,31 @@ except:
 
 logger.info("SUCCESS: Connection to RDS mysql instance succeeded")
 
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def validateRow(row):
+
+def validate_row(row):
     return len(row) == 3 and '-' not in row[2] and row[2].isdigit()
 
-def parseLine(line):
+
+def parse_line(line):
     return line.decode("utf-8").rstrip().split(",")
+
+
+def insert_row(row, d):
+    parent = row[0]
+    child = row[1]
+    quantity = row[2]
+    if parent not in d:
+        d[parent] = set()
+    if child not in d[parent]:
+        d[parent].add(child)
+        with conn.cursor() as cur:
+            query = 'insert into graph (parent, child, quantity) values(%s,%s,%s)'
+            cur.execute(query, (parent, child, quantity))
 
 
 @app.route('/', methods=['POST'])
@@ -54,20 +70,11 @@ def post():
 
                 with open(file_path, 'rb') as sf:
                     for line in sf:
-                        row = parseLine(line)
-                        if validateRow(row):
-                            parent = row[0]
-                            child = row[1]
-                            quantity = row[2]
-                            if parent not in d:
-                                d[parent] = set()
-                            if child not in d[parent]:
-                                d[parent].add(child)
-                                with conn.cursor() as cur:
-                                    query = 'insert into graph (parent, child, quantity) values(%s,%s,%s)'
-                                    cur.execute(query, (parent, child, quantity))
+                        row = parse_line(line)
+                        if validate_row(row):
+                            insert_row(row, d)
                     conn.commit()
-                    return Response('Uploaded file successfully', status=200)
+                return Response('Uploaded file successfully', status=200)
 
             else:
                 return Response('Bad request, wrong file type', status=400)
