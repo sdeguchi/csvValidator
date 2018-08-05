@@ -33,6 +33,13 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def validateRow(row):
+    return len(row) == 3 and '-' not in row[2] and row[2].isdigit()
+
+def parseLine(line):
+    return line.decode("utf-8").rstrip().split(",")
+
+
 @app.route('/', methods=['POST'])
 def post():
     if request.method == 'POST':
@@ -47,8 +54,8 @@ def post():
 
                 with open(file_path, 'rb') as sf:
                     for line in sf:
-                        row = line.decode("utf-8").rstrip().split(",")
-                        if len(row) == 3 and '-' not in row[2] and row[2].isdigit():
+                        row = parseLine(line)
+                        if validateRow(row):
                             parent = row[0]
                             child = row[1]
                             quantity = row[2]
